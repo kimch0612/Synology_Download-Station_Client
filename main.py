@@ -1,4 +1,5 @@
 import json
+import sys
 import chromedriver_autoinstaller
 from selenium import webdriver
 
@@ -6,14 +7,12 @@ chromedriver_autoinstaller.install()
 
 with open('account.json', 'rt', encoding='UTF8') as json_file:
     json_data = json.load(json_file)
+    nas = json_data["url"]
     id = json_data["id"]
     pw = json_data["pw"]
 
-link = input("Please typing url what you want to download : ")
-file = input("Please drop down Torrent File (or typing it's physical directory directions) : ")
-
-login_session = "https://your-nas-domain/webapi/auth.cgi?api=SYNO.API.Auth&version=2&method=login&account=%s&passwd=%s&session=DownloadStation&format=cookie" % (id, pw)
-download_task = "https://your-nas-domain/webapi/DownloadStation/task.cgi?api=SYNO.DownloadStation.Task&version=1&method=list&format=cookie"
+login_session = "https://%s/webapi/auth.cgi?api=SYNO.API.Auth&version=2&method=login&account=%s&passwd=%s&session=DownloadStation&format=cookie" % (nas, id, pw)
+download_task = "https://%s/webapi/DownloadStation/task.cgi?api=SYNO.DownloadStation.Task&version=1&method=list&format=cookie" % (nas)
 
 options = webdriver.ChromeOptions()
 options.add_argument('log-level=2')
@@ -25,37 +24,42 @@ driver.get(login_session)
 delay = 2
 driver.implicitly_wait(delay)
 
-driver.get(download_task)
-delay = 2
-title = driver.find_element_by_tag_name("pre").text
-data = json.loads(title)
-with open('list.json', 'w', encoding='utf-8') as make_file:
-    json.dump(title, make_file, ensure_ascii=False)
+def download_task_hamsu() :
+    driver.get(download_task)
+    delay = 2
+    driver.implicitly_wait(delay)
+    title = driver.find_element_by_tag_name("pre").text
+    data = json.loads(title)
+    with open('list.json', 'w', encoding='utf-8') as make_file:
+        json.dump(title, make_file, ensure_ascii=False)
+    print(data)
 
-print(data)
+def download_link_hamsu() :
+    link = input("다운로드 하고자 하는 URL을 입력해주세요 (파일 직링크 또는 마그넷 링크) : ")
+    print("파일 다운로드 요청을 보내는 중..", end='')
+    download_link = "https://%s/webapi/DownloadStation/task.cgi?api=SYNO.DownloadStation.Task&version=1&method=create&uri=%s" % (nas, link)
+    driver.get(download_link)
+    delay = 2
+    driver.implicitly_wait(delay)
+    print("완료!")
 
-print("Now downloading file(s) now..")
-download_link = "https://your-nas-domain/webapi/DownloadStation/task.cgi?api=SYNO.DownloadStation.Task&version=1&method=create&uri=%s" % (link)
+def download_file_hamsu() :
+    file = input("토렌트 파일을 이곳에 드래그 하시거나 파일의 경로를 입력해주세요 : ")
+    print("토렌트 파일을 업로드하는 중..", end='')
+    download_file = "https://%s/webapi/DownloadStation/task.cgi?api=SYNO.DownloadStation.Task&version=1&method=create&file=%s" % (nas, file)
+    driver.get(download_file)
+    delay = 2
+    driver.implicitly_wait(delay)
+    print("완료!")
 
-driver.get(download_link)
-delay = 2
-
-driver.get(download_task)
-delay = 2
-title = driver.find_element_by_tag_name("pre").text
-data = json.loads(title)
-with open('list.json', 'w', encoding='utf-8') as make_file:
-    json.dump(title, make_file, ensure_ascii=False)
-print(data)
-
-download_file = "https://your-nas-domain/webapi/DownloadStation/task.cgi?api=SYNO.DownloadStation.Task&version=1&method=create&file=%s" % (file)
-driver.get(download_file)
-delay = 2
-
-driver.get(download_task)
-delay = 2
-title = driver.find_element_by_tag_name("pre").text
-data = json.loads(title)
-with open('list.json', 'w', encoding='utf-8') as make_file:
-    json.dump(title, make_file, ensure_ascii=False)
-print(data)
+while True:
+    whatyouwant = input("원하는 작업을 입력하세요 (현재 상태 / URL로 다운로드 / 파일로 다운로드 / 종료) : ")
+    if whatyouwant == "현재 상태" or whatyouwant == "0":
+        download_task_hamsu()
+    elif whatyouwant == "URL로 다운로드" or whatyouwant == "1":
+        download_link_hamsu()
+    elif whatyouwant == "파일로 다운로드" or whatyouwant == "2":
+        download_file_hamsu()
+    elif whatyouwant == "종료" or whatyouwant == "3":
+        driver.quit()
+        sys.exit(1)
